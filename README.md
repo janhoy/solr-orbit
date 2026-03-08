@@ -2,11 +2,14 @@
 
 Apache Solr Benchmark is a macrobenchmarking framework for [Apache Solr](https://solr.apache.org/).
 
-**This POC lives in the `janhoy` github account while evaluating. May be moved to apache later if accepted by the PMC**.
+It is a fork/port of [Rally](https://github.com/elastic/rally)/[Opensearch Benchmark](https://github.com/opensearch-project/opensearch-benchmark), ported to work with Apache Solr.
 
 ## Documentation
 
 Full documentation is available in [`docs/`](docs/) folder of this repository. Build the docs with jekyll.
+A public documentation site is available at [https://janhoy.github.io/solr-benchmark/](https://janhoy.github.io/solr-benchmark/).
+
+**This is a Work in Progress**
 
 ## What is Apache Solr Benchmark?
 
@@ -68,7 +71,8 @@ solr-benchmark run \
 
 See [Workload Reference](https://janhoy.github.io/solr-benchmark/reference/workloads/) in the documentation for the full `workload.json` format, including `collections`, `corpora`, `operations`, and `test-procedures`.
 
-Pre-built workloads are available at [https://github.com/janhoy/solr-benchmark-workloads](https://github.com/janhoy/solr-benchmark-workloads).
+Pre-built workloads are available at [https://github.com/janhoy/solr-benchmark-workloads](https://github.com/janhoy/solr-benchmark-workloads). Feel free to
+contribute your own with a pull request!
 
 ## Result output
 
