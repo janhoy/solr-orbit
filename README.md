@@ -39,7 +39,7 @@ pip install -e .
 solr-benchmark run \
   --pipeline=docker \
   --distribution-version=9.10.1 \
-  --workload=geonames \
+  --workload=nyc_taxis \
   --test-mode
 ```
 
@@ -50,20 +50,20 @@ solr-benchmark run \
 ```bash
 solr-benchmark run \
   --pipeline=from-distribution \
-  --distribution-version=9.7.0 \
-  --workload=geonames \
+  --distribution-version=9.10.1 \
+  --workload=nyc_taxis \
   --test-mode
 ```
 
 **Note**: Always uses cloud mode (SolrCloud with embedded ZooKeeper).
 
-### Provision Solr via Docker, then benchmark
+### Provision Solr from source, then benchmark
 
 ```bash
 solr-benchmark run \
-  --pipeline=docker \
-  --distribution-version=9.7.0 \
-  --workload=geonames \
+  --pipeline=from-sources \
+  --distribution-version=9.10.1 \
+  --workload=nyc_taxis \
   --test-mode
 ```
 
