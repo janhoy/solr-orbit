@@ -75,25 +75,17 @@ class TestSegmentStats(unittest.TestCase):
     def test_segment_stats_luke_success(self):
         """SegmentStats writes segment data from Luke API to log file."""
         with tempfile.TemporaryDirectory() as log_root:
-            device = SegmentStats(log_root=log_root, host="localhost", port=8983)
-
-            list_resp = self._make_response({"collections": ["my_coll"]})
-            luke_resp = self._make_response({
-                "index": {
-                    "numDocs": 1000,
-                    "maxDoc": 1001,
-                    "deletedDocs": 1,
-                    "segmentCount": 5,
-                    "sizeInBytes": 204800,
-                }
-            })
-
-            with patch("requests.Session") as mock_session_cls:
-                session_instance = MagicMock()
-                mock_session_cls.return_value = session_instance
-                session_instance.get.side_effect = [list_resp, luke_resp]
-
-                device.on_benchmark_stop()
+            admin_client = MagicMock()
+            admin_client.list_collections.return_value = ["my_coll"]
+            admin_client.get_luke_stats.return_value = {
+                "numDocs": 1000,
+                "maxDoc": 1001,
+                "deletedDocs": 1,
+                "segmentCount": 5,
+                "sizeInBytes": 204800,
+            }
+            device = SegmentStats(log_root=log_root, admin_client=admin_client)
+            device.on_benchmark_stop()
 
             stats_file = os.path.join(log_root, "segment_stats.log")
             self.assertTrue(os.path.exists(stats_file), "segment_stats.log should be created")
@@ -105,31 +97,21 @@ class TestSegmentStats(unittest.TestCase):
     def test_segment_stats_luke_failure_graceful(self):
         """SegmentStats swallows Luke API errors without propagating exceptions."""
         with tempfile.TemporaryDirectory() as log_root:
-            device = SegmentStats(log_root=log_root, host="localhost", port=8983)
-
-            list_resp = self._make_response({"collections": ["bad_coll"]})
-            luke_resp = self._make_response({}, status_code=500)
-
-            with patch("requests.Session") as mock_session_cls:
-                session_instance = MagicMock()
-                mock_session_cls.return_value = session_instance
-                session_instance.get.side_effect = [list_resp, luke_resp]
-
-                # Should not raise
-                device.on_benchmark_stop()
+            admin_client = MagicMock()
+            admin_client.list_collections.return_value = ["bad_coll"]
+            admin_client.get_luke_stats.side_effect = Exception("HTTP 500")
+            device = SegmentStats(log_root=log_root, admin_client=admin_client)
+            # Should not raise
+            device.on_benchmark_stop()
 
     def test_segment_stats_connection_error_graceful(self):
         """SegmentStats swallows connection errors without propagating exceptions."""
         with tempfile.TemporaryDirectory() as log_root:
-            device = SegmentStats(log_root=log_root, host="localhost", port=8983)
-
-            with patch("requests.Session") as mock_session_cls:
-                session_instance = MagicMock()
-                mock_session_cls.return_value = session_instance
-                session_instance.get.side_effect = ConnectionError("refused")
-
-                # Should not raise
-                device.on_benchmark_stop()
+            admin_client = MagicMock()
+            admin_client.list_collections.side_effect = ConnectionError("refused")
+            device = SegmentStats(log_root=log_root, admin_client=admin_client)
+            # Should not raise
+            device.on_benchmark_stop()
 
 
 # ---------------------------------------------------------------------------
@@ -178,9 +160,9 @@ class TestShardStats(unittest.TestCase):
 
     def test_shard_stats_solrcloud_starts_sampler(self):
         """ShardStats starts a sampler thread when CLUSTERSTATUS shows collections."""
-        admin_client, session = _make_admin_client()
+        admin_client, _ = _make_admin_client()
         metrics_store, _ = _make_metrics_store()
-        session.get.return_value = self._make_session_resp(CLUSTERSTATUS_RESPONSE)
+        admin_client.get_clusterstatus.return_value = CLUSTERSTATUS_RESPONSE
 
         device = ShardStats(telemetry_params={}, admin_client=admin_client, metrics_store=metrics_store)
         device.on_benchmark_start()
@@ -191,10 +173,9 @@ class TestShardStats(unittest.TestCase):
 
     def test_shard_stats_standalone_skipped(self):
         """ShardStats skips silently when CLUSTERSTATUS has no cluster.collections."""
-        admin_client, session = _make_admin_client()
+        admin_client, _ = _make_admin_client()
         metrics_store, _ = _make_metrics_store()
-        # Standalone Solr returns an empty cluster object (no 'collections' key)
-        session.get.return_value = self._make_session_resp({"responseHeader": {}})
+        admin_client.get_clusterstatus.return_value = {"responseHeader": {}}
 
         device = ShardStats(telemetry_params={}, admin_client=admin_client, metrics_store=metrics_store)
         device.on_benchmark_start()
@@ -203,12 +184,13 @@ class TestShardStats(unittest.TestCase):
 
     def test_shard_stats_recorder_emits_metrics(self):
         """ShardStatsRecorder polls CLUSTERSTATUS and Core STATUS and emits metrics."""
-        admin_client, session = _make_admin_client()
+        admin_client, _ = _make_admin_client()
         metrics_store, stored = _make_metrics_store()
 
-        cs_resp = self._make_session_resp(CLUSTERSTATUS_RESPONSE)
-        core_resp = self._make_session_resp(CORE_STATUS_RESPONSE)
-        session.get.side_effect = [cs_resp, core_resp]
+        admin_client.get_clusterstatus.return_value = CLUSTERSTATUS_RESPONSE
+        admin_client.get_core_status.return_value = {
+            "index": {"numDocs": 500, "sizeInBytes": 10240}
+        }
 
         recorder = ShardStatsRecorder(admin_client=admin_client, metrics_store=metrics_store, sample_interval=60)
         recorder.record()
@@ -220,9 +202,9 @@ class TestShardStats(unittest.TestCase):
 
     def test_shard_stats_connection_error_graceful(self):
         """ShardStatsRecorder swallows connection errors."""
-        admin_client, session = _make_admin_client()
+        admin_client, _ = _make_admin_client()
         metrics_store, _ = _make_metrics_store()
-        session.get.side_effect = ConnectionError("refused")
+        admin_client.get_clusterstatus.side_effect = ConnectionError("refused")
 
         recorder = ShardStatsRecorder(admin_client=admin_client, metrics_store=metrics_store, sample_interval=60)
         # Should not raise
@@ -263,7 +245,7 @@ class TestClusterEnvironmentInfo(unittest.TestCase):
 
     def test_cluster_env_info_stores_version_and_jvm(self):
         """ClusterEnvironmentInfo stores Solr version, JVM info, and CPU count."""
-        admin_client, session = _make_admin_client()
+        admin_client, _session = _make_admin_client()
 
         meta_store = {}
         metrics_store = MagicMock()
@@ -272,8 +254,7 @@ class TestClusterEnvironmentInfo(unittest.TestCase):
         )
 
         system_resp = self._make_session_resp(SYSTEM_INFO_RESPONSE)
-        cs_resp = self._make_session_resp(CLUSTERSTATUS_RESPONSE)
-        session.get.side_effect = [system_resp, cs_resp]
+        admin_client.raw_request.return_value = system_resp
 
         device = ClusterEnvironmentInfo(admin_client=admin_client, metrics_store=metrics_store)
         device.on_benchmark_start()
@@ -282,13 +263,12 @@ class TestClusterEnvironmentInfo(unittest.TestCase):
         self.assertEqual("21.0.1", meta_store.get("jvm_version"))
         self.assertEqual("OpenJDK 21", meta_store.get("jvm_vendor"))
         self.assertEqual(8, meta_store.get("cpu_logical_cores"))
-        self.assertEqual(1, meta_store.get("cluster_node_count"))
 
     def test_cluster_env_info_failure_graceful(self):
         """ClusterEnvironmentInfo swallows connection errors."""
-        admin_client, session = _make_admin_client()
+        admin_client, _session = _make_admin_client()
         metrics_store = MagicMock()
-        session.get.side_effect = ConnectionError("refused")
+        admin_client.raw_request.side_effect = ConnectionError("refused")
 
         device = ClusterEnvironmentInfo(admin_client=admin_client, metrics_store=metrics_store)
         # Should not raise

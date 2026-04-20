@@ -21,11 +21,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 
 class BenchmarkError(Exception):
     """
-    Base class for all OSB exceptions
+    Base class for all ASB exceptions
     """
 
     def __init__(self, message, cause=None):

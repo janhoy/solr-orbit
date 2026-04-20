@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import datetime
 import glob
@@ -315,7 +318,7 @@ class SourceSupplier:
                                 self.template_renderer.render(self.cluster_config.mandatory_var("system.artifact_path_pattern")))
             return glob.glob(path)[0]
         except IndexError:
-            raise SystemSetupError("Couldn't find a tar.gz distribution. Please run OSB with the pipeline 'from-sources'.")
+            raise SystemSetupError("Couldn't find a tar.gz distribution. Please run ASB with the pipeline 'from-sources'.")
 
 
 

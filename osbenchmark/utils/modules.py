@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import importlib.machinery
 import logging
@@ -34,8 +37,8 @@ from osbenchmark.utils import io
 class ComponentLoader:
     """
     Loads a dynamically defined component. A component in this terminology
-    is any piece of code that is not part of the OSB core code base
-    but extends it. Examples include custom runners or parameter sources for workloads or install hooks for OpenSearch plugins.
+    is any piece of code that is not part of the ASB core code base
+    but extends it. Examples include custom runners or parameter sources for workloads or install hooks for plugins.
 
     A component has always a well-defined entry point. This is the
     "main" Python file (e.g. ``workload.py`` for workloads or ``plugin.py`` for

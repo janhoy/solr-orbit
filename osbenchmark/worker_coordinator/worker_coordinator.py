@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import asyncio
 import collections
@@ -62,7 +65,7 @@ class PrepareBenchmark:
 
     def __init__(self, config, workload):
         """
-        :param config: OSB internal configuration object.
+        :param config: ASB internal configuration object.
         :param workload: The workload to use.
         """
         self.config = config
@@ -80,7 +83,7 @@ class PrepareWorkload:
     """
     def __init__(self, cfg, workload):
         """
-        :param cfg: OSB internal configuration object.
+        :param cfg: ASB internal configuration object.
         :param workload: The workload to use.
         """
         self.config = cfg
@@ -135,7 +138,7 @@ class StartWorker:
     def __init__(self, worker_id, config, workload, client_allocations, feedback_actor=None, error_queue=None, queue_lock=None, shared_states=None):
         """
         :param worker_id: Unique (numeric) id of the worker.
-        :param config: OSB internal configuration object.
+        :param config: ASB internal configuration object.
         :param workload: The workload to use.
         :param client_allocations: A structure describing which clients need to run which tasks.
         """
@@ -310,8 +313,6 @@ class FeedbackActor(actor.BenchmarkActor):
         self.max_cpu_threshold = None
         self.cpu_window_seconds = None
         self.cpu_check_interval = None
-        # client, index, and test run ID for querying users' data store
-        self.os_client = None
         self.metrics_index = None
         self.test_run_id=None
 
@@ -355,7 +356,6 @@ class FeedbackActor(actor.BenchmarkActor):
         self.metrics_index = msg.metrics_index
         if msg.cpu_max:
             self.max_cpu_threshold = msg.cpu_max
-            self.os_client = None  # Redline CPU-feedback requires an external OS metrics store (not supported in Solr Benchmark)
         self.logger.info(
         "Feedback actor has received the following configuration: Max clients = %s, scale step = %d, scale down percentage = %f, sleep time = %d",
         self.total_client_count, self.num_clients_to_scale_up, self.percentage_clients_to_scale_down, self.POST_SCALEDOWN_SECONDS
@@ -521,57 +521,11 @@ class FeedbackActor(actor.BenchmarkActor):
             self.state = FeedbackState.NEUTRAL
 
     def _check_cpu_usage(self):
-        """
-        Grab the average CPU load per-node in the past N seconds
-        If any exceed the threshold given, report to the error queue
-        """
-        body = {
-            "size": 0,
-            "query": {
-                "bool": {
-                "filter": [
-                    { "term":  { "name": "node-stats" }},
-                    { "term":  { "test-run-id": self.test_run_id }},
-                    { "range": { "@timestamp": { "gte": f"now-{self.cpu_window_seconds}s", "lte": "now" }}}
-                ]
-                }
-            },
-            "aggs": {
-                "nodes": {
-                "terms": {
-                    "field": "meta.node_name",
-                    "size": 1000
-                },
-                "aggs": {
-                    "avg_cpu": {
-                    "avg": { "field": "process_cpu_percent" }
-                    },
-                    "hot_node_filter": {
-                    "bucket_selector": {
-                        "buckets_path": { "avgCpu": "avg_cpu" },
-                        "script": f"params.avgCpu > {self.max_cpu_threshold}"
-                    }
-                    }
-                }
-                }
-            }
-        }
-        resp = self.os_client.search(index=self.metrics_index, body=body)
-        buckets = resp['aggregations']['nodes']['buckets']
-        if buckets:
-            for bucket in buckets:
-                self.logger.info("Node %s avg CPU=%.1f%% > threshold %.1f%%", bucket['key'], bucket['avg_cpu']['value'], self.max_cpu_threshold)
-                try:
-                    self.error_queue.put_nowait({
-                        "type":       "cpu_threshold_exceeded",
-                        "node_name":  bucket['key'],
-                        "value":      bucket['avg_cpu']['value']
-                    })
-                except queue.Full:
-                    self.logger.warning("Error queue full; dropping cpu_threshold_exceeded for node %s", bucket['key'])
-                break # we only need one error message to trigger a scaledown
-        else:
-            self.logger.info("All nodes are currently under max usage threshold")
+        raise exceptions.SystemSetupError(
+            "CPU-based redline feedback requires an external OpenSearch metrics store "
+            "which is not supported in Solr Benchmark. "
+            "Disable redline testing or remove 'redline.max_cpu_usage' from your config."
+        )
 
 class WorkerCoordinatorActor(actor.BenchmarkActor):
     RESET_RELATIVE_TIME_MARKER = "reset_relative_time"
@@ -962,34 +916,28 @@ class WorkerCoordinator:
 
     def prepare_telemetry(self, clients, enable):
         enabled_devices = self.config.opts("telemetry", "devices")
-        self.telemetry = telemetry.Telemetry(enabled_devices, devices=self._create_solr_telemetry_devices() if enable else [])
+        self.telemetry = telemetry.Telemetry(enabled_devices, devices=self._create_solr_telemetry_devices(clients) if enable else [])
 
-    def _create_solr_telemetry_devices(self):
-        """Create Solr telemetry devices from the target-hosts configuration."""
+    def _create_solr_telemetry_devices(self, clients):
+        """Create Solr telemetry devices using the unified SolrClient."""
         # pylint: disable=import-outside-toplevel
-        from osbenchmark.solr.client import SolrAdminClient
-        from osbenchmark.solr import telemetry as solr_telemetry
+        from osbenchmark.client import SolrClient
 
-        all_hosts = self.config.opts("client", "hosts").all_hosts
-        hosts = all_hosts.get("default", [])
-        host_entry = hosts[0] if hosts else {}
-        if isinstance(host_entry, dict):
-            solr_host = host_entry.get("host", "localhost")
-            solr_port = host_entry.get("port", 8983)
-        else:
-            # host_entry may be a "host:port" string
-            parts = str(host_entry).rsplit(":", 1)
-            solr_host = parts[0] if parts else "localhost"
-            solr_port = int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else 8983
-
-        admin = SolrAdminClient(host=solr_host, port=solr_port)
+        sc = clients.get("default")
+        if not isinstance(sc, SolrClient):
+            # Guard against test mocks or missing clients — skip telemetry device creation.
+            return []
+        log_root = self.config.opts("node", "root.dir", mandatory=False) or "."
+        telemetry_params = self.config.opts("telemetry", "params", mandatory=False) or {}
         return [
-            solr_telemetry.SolrJvmStats(admin, self.metrics_store),
-            solr_telemetry.SolrNodeStats(admin, self.metrics_store),
-            solr_telemetry.SolrCollectionStats(admin, self.metrics_store),
-            solr_telemetry.SolrQueryStats(admin, self.metrics_store),
-            solr_telemetry.SolrIndexingStats(admin, self.metrics_store),
-            solr_telemetry.SolrCacheStats(admin, self.metrics_store),
+            telemetry.SolrJvmStats(sc, self.metrics_store),
+            telemetry.SolrNodeStats(sc, self.metrics_store),
+            telemetry.SolrCollectionStats(sc, self.metrics_store),
+            telemetry.SolrQueryStats(sc, self.metrics_store),
+            telemetry.SolrIndexingStats(sc, self.metrics_store),
+            telemetry.SolrCacheStats(sc, self.metrics_store),
+            telemetry.SegmentStats(log_root, sc),
+            telemetry.ShardStats(telemetry_params, sc, self.metrics_store),
         ]
 
     def wait_for_rest_api(self, clients):
@@ -1096,7 +1044,7 @@ class WorkerCoordinator:
         self.number_of_steps = len(allocator.join_points) - 1
         self.tasks_per_join_point = allocator.tasks_per_joinpoint
 
-        self.logger.info("OSB consists of [%d] steps executed by [%d] clients.",
+        self.logger.info("ASB consists of [%d] steps executed by [%d] clients.",
                          self.number_of_steps, len(self.allocations))
         # avoid flooding the log if there are too many clients
         if allocator.clients < 128:
@@ -2145,8 +2093,7 @@ class AsyncIoAdapter:
             clients = {}
             for cluster_name, cluster_hosts in all_hosts.items():
                 rest_client_factory = client.ClientFactory(cluster_hosts, all_client_options[cluster_name])
-                unified_client_factory = client.UnifiedClientFactory(rest_client_factory)
-                clients[cluster_name] = unified_client_factory.create_async()
+                clients[cluster_name] = rest_client_factory.create()
             return clients
 
         # Properly size the internal connection pool to match the number of expected clients but allow the user

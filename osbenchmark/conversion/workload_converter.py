@@ -21,7 +21,7 @@ OpenSearch Workload to Solr Workload Converter
 Converts an OpenSearch Benchmark workload directory to a Solr-native workload.
 
 Usage:
-    from osbenchmark.solr.conversion.workload_converter import convert_opensearch_workload
+    from osbenchmark.conversion.workload_converter import convert_opensearch_workload
     result = convert_opensearch_workload("/path/to/osb_workload", "/path/to/solr_workload")
 
 The converter:
@@ -824,7 +824,7 @@ def _write_converted_marker(output_dir: str, source_dir: str, skipped: list, iss
     content = f"""# Workload Conversion Record
 
 This workload was automatically converted from OpenSearch Benchmark format to
-Solr Benchmark format by `osbenchmark.solr.conversion.workload_converter`.
+Solr Benchmark format by `osbenchmark.conversion.workload_converter`.
 
 ## Metadata
 

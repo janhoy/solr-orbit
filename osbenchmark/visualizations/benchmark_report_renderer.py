@@ -1,3 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenSearch Contributors require contributions made to
+# this file be licensed under the Apache-2.0 license or a
+# compatible open source license.
+# Modifications Copyright OpenSearch Contributors. See
+# GitHub history for details.
+# Licensed to Elasticsearch B.V. under one or more contributor
+# license agreements. See the NOTICE file distributed with
+# this work for additional information regarding copyright
+# ownership. Elasticsearch B.V. licenses this file to you under
+# the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#	http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 def render_results_html(test_run, cfg) -> str:
     """
@@ -34,8 +60,8 @@ def render_results_html(test_run, cfg) -> str:
 
     # 2) Pull top-level fields
     test_id       = doc.get("test-run-id", "<unknown>")
-    osb_ver       = doc.get("benchmark-version", "")
-    osb_rev       = doc.get("benchmark-revision", "")
+    asb_ver       = doc.get("benchmark-version", "")
+    asb_rev       = doc.get("benchmark-revision", "")
     environment   = doc.get("environment", "")
     pipeline      = doc.get("pipeline", "")
     workload      = doc.get("workload", "")
@@ -49,8 +75,8 @@ def render_results_html(test_run, cfg) -> str:
 
     # 4) Config table dict
     config_dict = {
-        "OSB Version":               osb_ver,
-        "OSB Revision (git)":        osb_rev,
+        "ASB Version":               asb_ver,
+        "ASB Revision (git)":        asb_rev,
         "Environment":               environment,
         "Pipeline":                  pipeline,
         "Workload":                  workload,
@@ -251,7 +277,7 @@ def render_results_html(test_run, cfg) -> str:
             <div class="card">
               <h2>Cluster & Benchmark Configuration</h2>
               <div class="subtitle">
-                OSB version, Git revision, environment, pipeline, workload, distro info, etc.
+                ASB version, Git revision, environment, pipeline, workload, distro info, etc.
               </div>
               {cfg_table_html}
             </div>

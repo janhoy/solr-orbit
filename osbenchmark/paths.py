@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 import os
 from osbenchmark.utils.io import ensure_dir
 
@@ -58,6 +61,6 @@ def install_root(cfg=None):
 # pylint: disable=invalid-docstring-quote
 def logs():
     """
-    :return: The absolute path to the directory that contains OSB's log file.
+    :return: The absolute path to the directory that contains ASB's log file.
     """
     return os.path.join(benchmark_confdir(), "logs")

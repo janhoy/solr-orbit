@@ -15,21 +15,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests for osbenchmark/solr/runner.py"""
+"""Unit tests for Solr runners (osbenchmark/worker_coordinator/runner.py)"""
 
 import asyncio
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from osbenchmark.solr.runner import (
+from osbenchmark.worker_coordinator.runner import (
     _translate_ndjson_batch,
     SolrBulkIndex,
     SolrSearch,
     SolrCreateCollection,
     SolrDeleteCollection,
 )
-from osbenchmark.solr.conversion.field import normalize_field_name
-from osbenchmark.solr.conversion.query import translate_opensearch_query
+from osbenchmark.conversion.field import normalize_field_name
+from osbenchmark.conversion.query import translate_opensearch_query
 
 
 # Backward compatibility aliases for tests
@@ -172,45 +172,39 @@ class TestSolrBulkIndex(unittest.TestCase):
             "bulk-size": 500,
         }
 
-    @patch("osbenchmark.solr.runner.pysolr.Solr")
-    def test_bulk_index_returns_weight(self, mock_solr_cls):
-        mock_solr = MagicMock()
-        mock_solr.add = MagicMock(return_value=None)
-        mock_solr_cls.return_value = mock_solr
+    def test_bulk_index_returns_weight(self):
+        mock_sc = MagicMock()
+        mock_sc.add.return_value = None
 
         lines = [
             '{"index": {"_id": "1"}}',
             '{"title": "doc"}',
         ]
         runner = SolrBulkIndex()
-        result = _run(runner(None, self._params(lines)))
+        result = _run(runner(mock_sc, self._params(lines)))
 
         self.assertEqual(1, result["weight"])
         self.assertEqual("docs", result["unit"])
         self.assertTrue(result["success"])
 
-    @patch("osbenchmark.solr.runner.pysolr.Solr")
-    def test_bulk_index_reports_errors(self, mock_solr_cls):
+    def test_bulk_index_reports_errors(self):
         import pysolr
-        mock_solr = MagicMock()
-        mock_solr.add.side_effect = pysolr.SolrError("Indexing error")
-        mock_solr_cls.return_value = mock_solr
+        mock_sc = MagicMock()
+        mock_sc.add.side_effect = pysolr.SolrError("Indexing error")
 
         lines = [
             '{"index": {"_id": "1"}}',
             '{"title": "doc"}',
         ]
         runner = SolrBulkIndex()
-        result = _run(runner(None, self._params(lines)))
+        result = _run(runner(mock_sc, self._params(lines)))
         self.assertFalse(result["success"])
         self.assertGreater(result["error-count"], 0)
 
-    @patch("osbenchmark.solr.runner.pysolr.Solr")
-    def test_simple_ndjson_format(self, mock_solr_cls):
+    def test_simple_ndjson_format(self):
         """Test simple NDJSON (one doc per line, no action lines)."""
-        mock_solr = MagicMock()
-        mock_solr.add = MagicMock(return_value=None)
-        mock_solr_cls.return_value = mock_solr
+        mock_sc = MagicMock()
+        mock_sc.add.return_value = None
 
         # Simple NDJSON: just document lines, no action lines
         lines = [
@@ -219,13 +213,13 @@ class TestSolrBulkIndex(unittest.TestCase):
             '{"vendor_id": "1", "trip_distance": 0.8}',
         ]
         runner = SolrBulkIndex()
-        result = _run(runner(None, self._params(lines)))
+        result = _run(runner(mock_sc, self._params(lines)))
 
         self.assertEqual(3, result["weight"])
         self.assertTrue(result["success"])
-        # Verify add was called with 3 docs
-        self.assertEqual(1, mock_solr.add.call_count)
-        added_docs = mock_solr.add.call_args[0][0]
+        # Verify add was called with 3 docs (collection + docs batch as positional args)
+        self.assertEqual(1, mock_sc.add.call_count)
+        added_docs = mock_sc.add.call_args[0][1]
         self.assertEqual(3, len(added_docs))
 
 
@@ -237,91 +231,74 @@ class TestSolrSearch(unittest.TestCase):
             "collection": "test",
         }
 
-    @patch("osbenchmark.solr.runner.pysolr.Solr")
-    def test_classic_mode(self, mock_solr_cls):
+    def test_classic_mode(self):
         mock_results = MagicMock()
         mock_results.hits = 42
-        mock_solr = MagicMock()
-        mock_solr.search.return_value = mock_results
-        mock_solr_cls.return_value = mock_solr
+        mock_sc = MagicMock()
+        mock_sc.search.return_value = mock_results
 
         params = {**self._base_params(), "q": "hello world", "rows": 10}
         runner = SolrSearch()
-        result = _run(runner(None, params))
+        result = _run(runner(mock_sc, params))
 
         self.assertEqual(42, result["hits"])
         self.assertEqual(1, result["weight"])
 
-    @patch("osbenchmark.solr.runner.requests.Session")
-    def test_json_dsl_mode(self, mock_session_cls):
-        """Mode 2: body with a Solr-style string query → POST to /query endpoint."""
+    def test_json_dsl_mode(self):
+        """Mode 2: body with a Solr-style string query → POST to /query endpoint via raw_request."""
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = {"response": {"numFound": 7}}
-        mock_session = MagicMock()
-        mock_session.post.return_value = mock_resp
-        mock_session_cls.return_value = mock_session
+        mock_sc = MagicMock()
+        mock_sc.raw_request.return_value = mock_resp
 
         # Solr JSON DSL uses a string for the 'query' key, not a dict
         params = {**self._base_params(), "body": {"query": "*:*", "limit": 5}}
         runner = SolrSearch()
-        result = _run(runner(None, params))
+        result = _run(runner(mock_sc, params))
 
         self.assertEqual(7, result["hits"])
-        mock_session.post.assert_called_once()
+        mock_sc.raw_request.assert_called_once()
 
-    @patch("osbenchmark.solr.runner.requests.Session")
-    def test_dict_query_body_posted_to_solr(self, mock_session_cls):
-        """Body with dict query (Solr JSON DSL) is POSTed to /query endpoint."""
+    def test_dict_query_body_posted_to_solr(self):
+        """Body with dict query (Solr JSON DSL) is POSTed to /query endpoint via raw_request."""
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = {"response": {"numFound": 3}}
-        mock_session = MagicMock()
-        mock_session.post.return_value = mock_resp
-        mock_session_cls.return_value = mock_session
+        mock_sc = MagicMock()
+        mock_sc.raw_request.return_value = mock_resp
 
         params = {**self._base_params(), "body": {"query": {"match_all": {}}, "size": 20}}
         runner = SolrSearch()
-        result = _run(runner(None, params))
+        result = _run(runner(mock_sc, params))
 
         self.assertEqual(3, result["hits"])
-        mock_session.post.assert_called_once()
+        mock_sc.raw_request.assert_called_once()
 
 
 class TestSolrCreateCollection(unittest.TestCase):
-    @patch("osbenchmark.solr.runner.SolrAdminClient")
-    def test_two_step_sequence(self, mock_admin_cls):
+    def test_two_step_sequence(self):
         import tempfile
-        mock_admin = MagicMock()
-        mock_admin.upload_configset = MagicMock()
-        mock_admin.create_collection = MagicMock()
-        mock_admin_cls.return_value = mock_admin
+        mock_sc = MagicMock()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             params = {
-                "host": "localhost",
-                "port": 8983,
                 "collection": "my-coll",
                 "configset": "my-config",
                 "configset-path": tmpdir,
             }
             runner = SolrCreateCollection()
-            _run(runner(None, params))
+            _run(runner(mock_sc, params))
 
         # Verify upload_configset called before create_collection
-        mock_admin.upload_configset.assert_called_once_with("my-config", tmpdir)
-        mock_admin.create_collection.assert_called_once()
+        mock_sc.upload_configset.assert_called_once_with("my-config", tmpdir)
+        mock_sc.create_collection.assert_called_once()
 
-    @patch("osbenchmark.solr.runner.SolrAdminClient")
-    def test_create_collection_passes_tlog_pull_replicas(self, mock_admin_cls):
+    def test_create_collection_passes_tlog_pull_replicas(self):
         """Runner should pass tlog-replicas and pull-replicas to create_collection."""
-        mock_admin = MagicMock()
-        mock_admin.create_collection = MagicMock()
-        mock_admin_cls.return_value = mock_admin
+        mock_sc = MagicMock()
 
         params = {
-            "host": "localhost",
-            "port": 8983,
             "collection": "my-coll",
             "configset": "my-config",
             "num-shards": 2,
@@ -330,51 +307,90 @@ class TestSolrCreateCollection(unittest.TestCase):
             "pull-replicas": 1,
         }
         runner = SolrCreateCollection()
-        _run(runner(None, params))
+        _run(runner(mock_sc, params))
 
-        mock_admin.create_collection.assert_called_once_with(
+        mock_sc.create_collection.assert_called_once_with(
             "my-coll", "my-config", 2, 1, 2, 1
         )
 
-    @patch("osbenchmark.solr.runner.SolrAdminClient")
-    def test_create_collection_defaults_tlog_pull_to_zero(self, mock_admin_cls):
+    def test_create_collection_defaults_tlog_pull_to_zero(self):
         """Runner defaults tlog-replicas and pull-replicas to 0 when omitted."""
-        mock_admin = MagicMock()
-        mock_admin.create_collection = MagicMock()
-        mock_admin_cls.return_value = mock_admin
+        mock_sc = MagicMock()
 
         params = {
-            "host": "localhost",
-            "port": 8983,
             "collection": "my-coll",
             "configset": "my-config",
         }
         runner = SolrCreateCollection()
-        _run(runner(None, params))
+        _run(runner(mock_sc, params))
 
-        mock_admin.create_collection.assert_called_once_with(
+        mock_sc.create_collection.assert_called_once_with(
             "my-coll", "my-config", 1, 1, 0, 0
         )
 
 
 class TestSolrDeleteCollection(unittest.TestCase):
-    @patch("osbenchmark.solr.runner.SolrAdminClient")
-    def test_delete_ignores_missing_by_default(self, mock_admin_cls):
-        from osbenchmark.solr.client import CollectionNotFoundError
-        mock_admin = MagicMock()
-        mock_admin.delete_collection.side_effect = CollectionNotFoundError("not found")
-        mock_admin.delete_configset = MagicMock()
-        mock_admin_cls.return_value = mock_admin
+    def test_delete_ignores_missing_by_default(self):
+        from osbenchmark.client import CollectionNotFoundError
+        mock_sc = MagicMock()
+        mock_sc.delete_collection.side_effect = CollectionNotFoundError("not found")
 
         params = {
-            "host": "localhost",
-            "port": 8983,
             "collection": "missing-coll",
             "ignore-missing": True,
         }
         runner = SolrDeleteCollection()
         # Should not raise
-        _run(runner(None, params))
+        _run(runner(mock_sc, params))
+
+
+class TestRunnerRegistrationSmoke(unittest.TestCase):
+    """
+    Verify that Solr runners work end-to-end through the MultiClientRunner wrapper.
+
+    The wrapper (created by register_runner) does client_extractor=lambda c: c["default"]
+    before calling the runner's __call__.  Tests that bypass register_runner and call
+    __call__ directly would miss this extraction and test the wrong calling convention.
+    These smoke-tests go through runner_for() so the full wrapper stack is exercised.
+    """
+
+    def setUp(self):
+        from osbenchmark.worker_coordinator.runner import register_default_runners
+        register_default_runners()
+
+    def _run_via_framework(self, op_type, clients_dict, params):
+        """Look up a registered runner and invoke it the same way execute_single does."""
+        from osbenchmark.worker_coordinator.runner import runner_for
+        wrapped = runner_for(op_type)
+        return _run(wrapped(clients_dict, params))
+
+    def test_delete_collection_via_framework(self):
+        """SolrDeleteCollection receives SolrClient directly after MultiClientRunner extraction."""
+        mock_sc = MagicMock()
+        params = {"collection": "smoke-coll", "ignore-missing": True}
+        # Pass the dict — the wrapper extracts ["default"] before calling __call__
+        self._run_via_framework("delete-collection", {"default": mock_sc}, params)
+        mock_sc.delete_collection.assert_called_once_with("smoke-coll")
+
+    def test_bulk_index_via_framework(self):
+        """SolrBulkIndex receives SolrClient directly after MultiClientRunner extraction."""
+        mock_sc = MagicMock()
+        mock_sc.add.return_value = None
+        lines = ['{"index": {"_id": "1"}}', '{"title": "doc"}']
+        params = {"collection": "smoke-coll", "corpus": lines, "bulk-size": 500}
+        result = self._run_via_framework("bulk-index", {"default": mock_sc}, params)
+        self.assertTrue(result["success"])
+        mock_sc.add.assert_called_once()
+
+    def test_search_via_framework(self):
+        """SolrSearch receives SolrClient directly after MultiClientRunner extraction."""
+        mock_results = MagicMock()
+        mock_results.hits = 5
+        mock_sc = MagicMock()
+        mock_sc.search.return_value = mock_results
+        params = {"collection": "smoke-coll", "q": "*:*"}
+        result = self._run_via_framework("search", {"default": mock_sc}, params)
+        self.assertEqual(5, result["hits"])
 
 
 if __name__ == "__main__":

@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 from unittest import TestCase
 
@@ -80,10 +83,10 @@ class WorkloadTests(TestCase):
 class DocumentCorpusTests(TestCase):
     def test_do_not_filter(self):
         corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
-            workload.Documents(source_format="other", number_of_documents=6, target_index="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_index="logs-03"),
-            workload.Documents(source_format=None, number_of_documents=8, target_index=None)
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
+            workload.Documents(source_format="other", number_of_documents=6, target_collection="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_collection="logs-03"),
+            workload.Documents(source_format=None, number_of_documents=8, target_collection=None)
         ], meta_data={
             "average-document-size-in-bytes": 12
         })
@@ -96,88 +99,73 @@ class DocumentCorpusTests(TestCase):
 
     def test_filter_documents_by_format(self):
         corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
-            workload.Documents(source_format="other", number_of_documents=6, target_index="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_index="logs-03"),
-            workload.Documents(source_format=None, number_of_documents=8, target_index=None)
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
+            workload.Documents(source_format="other", number_of_documents=6, target_collection="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_collection="logs-03"),
+            workload.Documents(source_format=None, number_of_documents=8, target_collection=None)
         ])
 
         filtered_corpus = corpus.filter(source_format=workload.Documents.SOURCE_FORMAT_BULK)
 
         self.assertEqual("test", filtered_corpus.name)
         self.assertEqual(2, len(filtered_corpus.documents))
-        self.assertEqual("logs-01", filtered_corpus.documents[0].target_index)
-        self.assertEqual("logs-03", filtered_corpus.documents[1].target_index)
+        self.assertEqual("logs-01", filtered_corpus.documents[0].target_collection)
+        self.assertEqual("logs-03", filtered_corpus.documents[1].target_collection)
 
     def test_filter_documents_by_indices(self):
         corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
-            workload.Documents(source_format="other", number_of_documents=6, target_index="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_index="logs-03"),
-            workload.Documents(source_format=None, number_of_documents=8, target_index=None)
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
+            workload.Documents(source_format="other", number_of_documents=6, target_collection="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_collection="logs-03"),
+            workload.Documents(source_format=None, number_of_documents=8, target_collection=None)
         ])
 
-        filtered_corpus = corpus.filter(target_indices=["logs-02"])
+        filtered_corpus = corpus.filter(target_collections=["logs-02"])
 
         self.assertEqual("test", filtered_corpus.name)
         self.assertEqual(1, len(filtered_corpus.documents))
-        self.assertEqual("logs-02", filtered_corpus.documents[0].target_index)
-
-    def test_filter_documents_by_data_streams(self):
-        corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5,
-                            target_data_stream="logs-01"),
-            workload.Documents(source_format="other", number_of_documents=6, target_data_stream="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7,
-                            target_data_stream="logs-03"),
-            workload.Documents(source_format=None, number_of_documents=8, target_data_stream=None)
-        ])
-
-        filtered_corpus = corpus.filter(target_data_streams=["logs-02"])
-        self.assertEqual("test", filtered_corpus.name)
-        self.assertEqual(1, len(filtered_corpus.documents))
-        self.assertEqual("logs-02", filtered_corpus.documents[0].target_data_stream)
+        self.assertEqual("logs-02", filtered_corpus.documents[0].target_collection)
 
     def test_filter_documents_by_format_and_indices(self):
         corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=6, target_index="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_index="logs-03"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=8, target_index=None)
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=6, target_collection="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_collection="logs-03"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=8, target_collection=None)
         ])
 
-        filtered_corpus = corpus.filter(source_format=workload.Documents.SOURCE_FORMAT_BULK, target_indices=["logs-01", "logs-02"])
+        filtered_corpus = corpus.filter(source_format=workload.Documents.SOURCE_FORMAT_BULK, target_collections=["logs-01", "logs-02"])
 
         self.assertEqual("test", filtered_corpus.name)
         self.assertEqual(2, len(filtered_corpus.documents))
-        self.assertEqual("logs-01", filtered_corpus.documents[0].target_index)
-        self.assertEqual("logs-02", filtered_corpus.documents[1].target_index)
+        self.assertEqual("logs-01", filtered_corpus.documents[0].target_collection)
+        self.assertEqual("logs-02", filtered_corpus.documents[1].target_collection)
 
     def test_union_document_corpus_is_reflexive(self):
         corpus = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=6, target_index="logs-02"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_index="logs-03"),
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=8, target_index=None)
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=6, target_collection="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=7, target_collection="logs-03"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=8, target_collection=None)
         ])
         self.assertTrue(corpus.union(corpus) is corpus)
 
     def test_union_document_corpora_is_symmetric(self):
         a = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
         ])
         b = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-02"),
         ])
         self.assertEqual(b.union(a), a.union(b))
         self.assertEqual(2, len(a.union(b).documents))
 
     def test_cannot_union_mixed_document_corpora_by_name(self):
         a = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
         ])
         b = workload.DocumentCorpus("other", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-02"),
         ])
         with self.assertRaises(exceptions.BenchmarkAssertionError) as ae:
             a.union(b)
@@ -185,12 +173,12 @@ class DocumentCorpusTests(TestCase):
 
     def test_cannot_union_mixed_document_corpora_by_meta_data(self):
         a = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-01"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-01"),
         ], meta_data={
             "with-metadata": False
         })
         b = workload.DocumentCorpus("test", documents=[
-            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_index="logs-02"),
+            workload.Documents(source_format=workload.Documents.SOURCE_FORMAT_BULK, number_of_documents=5, target_collection="logs-02"),
         ], meta_data={
             "with-metadata": True
         })
@@ -208,11 +196,9 @@ class OperationTypeTests(TestCase):
     def test_attributes(self):
         check_cluster_health = workload.OperationType.DeleteBackupRepository
         assert check_cluster_health.admin_op is True
-        assert check_cluster_health.serverless_status == workload.ServerlessStatus.Blocked
 
         bulk = workload.OperationType.Bulk
         assert bulk.admin_op is False
-        assert bulk.serverless_status == workload.ServerlessStatus.Public
 
 
 class TaskFilterTests(TestCase):

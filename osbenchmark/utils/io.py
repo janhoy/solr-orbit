@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import bz2
 import gzip
@@ -274,7 +277,7 @@ def _zipdir(source_directory, archive):
 def is_archive(name):
     """
     :param name: File name to check. Can be either just the file name or optionally also an absolute path.
-    :return: True iff the given file name is an archive that is also recognized for decompression by OSB.
+    :return: True iff the given file name is an archive that is also recognized for decompression by ASB.
     """
     _, ext = splitext(name)
     return ext in [".zip", ".bz2", ".gz", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".zst"]

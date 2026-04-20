@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import collections
 import glob
@@ -38,7 +41,7 @@ from osbenchmark import actor, config, doc_link, \
         publisher, workload, version, PROGRAM_NAME
 from osbenchmark.builder import cluster_config as cc_module
 from osbenchmark.builder.supplier import SourceRepository, Builder
-from osbenchmark.solr.provisioner import SolrProvisioner, SolrDockerLauncher
+from osbenchmark.builder.solr_provisioner import SolrProvisioner, SolrDockerLauncher
 from osbenchmark.utils import console, opts, versions
 
 
@@ -211,7 +214,7 @@ class BenchmarkCoordinator:
         if not workload_path or not os.path.isdir(workload_path):
             return
 
-        from osbenchmark.solr.conversion.detector import is_opensearch_workload_path
+        from osbenchmark.conversion.detector import is_opensearch_workload_path
         if is_opensearch_workload_path(workload_path):
             msg = (
                 f"This workload is in OpenSearch Benchmark format and cannot be run directly.\n"
@@ -230,24 +233,14 @@ class BenchmarkCoordinator:
         # to load the workload we need to know the correct cluster distribution version. Usually, this value should be set
         # but there are rare cases (external pipeline and user did not specify the distribution version) where we need
         # to derive it ourselves. For source builds we always assume "master"
-        oss_distribution_version = "2.11.0"
         if not sources and not self.cfg.exists("builder", "distribution.version"):
             distribution_version = builder.cluster_distribution_version(self.cfg)
-            if distribution_version == 'oss':
-                self.logger.info("Automatically derived serverless collection, setting distribution version to 2.11.0")
-                distribution_version = oss_distribution_version
-                if not self.cfg.exists("worker_coordinator", "serverless.mode"):
-                    self.cfg.add(config.Scope.benchmark, "worker_coordinator", "serverless.mode", True)
-
-                if not self.cfg.exists("worker_coordinator", "serverless.operator"):
-                    self.cfg.add(config.Scope.benchmark, "worker_coordinator", "serverless.operator", True)
-            else:
-                self.logger.info("Automatically derived distribution version [%s]", distribution_version)
+            self.logger.info("Automatically derived distribution version [%s]", distribution_version)
             self.cfg.add(config.Scope.benchmark, "builder", "distribution.version", distribution_version)
-            min_os_version = versions.Version.from_string(version.minimum_os_version())
+            min_solr_version = versions.Version.from_string(version.minimum_solr_version())
             specified_version = versions.Version.from_string(distribution_version)
-            if specified_version < min_os_version:
-                raise exceptions.SystemSetupError(f"Cluster version must be at least [{min_os_version}] but was [{distribution_version}]")
+            if specified_version < min_solr_version:
+                raise exceptions.SystemSetupError(f"Cluster version must be at least [{min_solr_version}] but was [{distribution_version}]")
 
         # Auto-convert OpenSearch workloads to Solr-native format before loading
         self._check_workload_is_solr_native()
@@ -262,9 +255,6 @@ class BenchmarkCoordinator:
                     self.current_workload.name, test_procedure_name, PROGRAM_NAME))
         if self.current_test_procedure.user_info:
             console.info(self.current_test_procedure.user_info)
-
-        for info in self.current_test_procedure.serverless_info:
-            console.info(info)
 
         self.test_run = metrics.create_test_run(
             self.cfg, self.current_workload,
@@ -317,7 +307,7 @@ class BenchmarkCoordinator:
         self.metrics_store.bulk_add(new_metrics)
 
     def on_benchmark_complete(self, new_metrics):
-        self.logger.info("OSB is complete.")
+        self.logger.info("ASB is complete.")
         self.logger.info("Bulk adding request metrics to metrics store.")
         self.metrics_store.bulk_add(new_metrics)
         self.metrics_store.flush()
@@ -357,7 +347,7 @@ def run_test(cfg, sources=False, distribution=False, external=False, docker=Fals
     try:
         result = actor_system.ask(benchmark_actor, Setup(cfg, sources, distribution, external, docker))
         if isinstance(result, Success):
-            logger.info("OSB has finished successfully.")
+            logger.info("ASB has finished successfully.")
         # may happen if one of the load generators has detected that the user has cancelled the benchmark.
         elif isinstance(result, actor.BenchmarkCancelled):
             logger.info("User has cancelled the benchmark (detected by actor).")
@@ -565,10 +555,10 @@ def solr_docker(cfg):
     Defaults to cloud mode (SolrCloud with embedded ZooKeeper).
 
     Config keys read:
-      - distribution.version  — Docker image tag (e.g. "9", "9.7.0", "10")
-      - solr.port             — port mapping (default: 8983)
+      - builder.distribution.version  — Docker image tag (e.g. "9", "9.7.0", "10")
+      - solr.port                     — port mapping (default: 8983)
     """
-    raw_version = cfg.opts("distribution", "version", mandatory=False, default_value="9")
+    raw_version = cfg.opts("builder", "distribution.version", mandatory=False, default_value="9")
     version_tag = _normalize_solr_docker_tag(raw_version)
     port = int(cfg.opts("solr", "port", mandatory=False, default_value=8983))
 

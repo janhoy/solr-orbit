@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 import json
 import logging
@@ -45,7 +48,7 @@ def configure_utc_formatter(*args, **kwargs):
 
 def log_config_path():
     """
-    :return: The absolute path to OSB's log configuration file.
+    :return: The absolute path to ASB's log configuration file.
     """
     # print("PATH: ", os.path.join(paths.benchmark_confdir(), "logging.json"))
     return os.path.join(paths.benchmark_confdir(), "logging.json")

@@ -13,13 +13,13 @@ A *workload* is the central concept in Apache Solr Benchmark. It defines:
 - The **data** to load (corpora — compressed NDJSON files)
 - The **collections** to create and configure
 - The **operations** to run (bulk indexing, search queries, commits, etc.)
-- The **challenges** (test procedures) that sequence those operations
+- The **test procedures** that sequence those operations
 
 Workloads are defined in a `workload.json` file. Pre-built workloads for Apache Solr are at [https://github.com/janhoy/solr-benchmark-workloads](https://github.com/janhoy/solr-benchmark-workloads).
 
-## Challenges (Test Procedures)
+## Test Procedures
 
-A *challenge* (also called *test procedure*) is a named configuration within a workload that specifies a particular benchmark scenario. A workload can have multiple challenges; you select one with `--challenge` when running the benchmark.
+A *test procedure* is a named configuration within a workload that specifies a particular benchmark scenario. A workload can have multiple test procedures; you select one with `--test-procedure` when running the benchmark.
 
 ## Pipelines
 
@@ -48,8 +48,10 @@ A *configset* is a named set of Solr configuration files (primarily `schema.xml`
 |-----------|-------------|
 | `bulk-index` | Index a batch of documents from a corpus |
 | `search` | Execute a Solr query |
-| `commit` | Issue a hard commit to Solr |
+| `commit` | Issue a hard (or soft) commit to Solr |
 | `optimize` | Issue an optimize (force-merge) command |
+| `wait-for-merges` | Wait until all background merge operations finish |
+| `paginated-search` | Cursor-paginated search using `cursorMark` |
 | `create-collection` | Create a Solr collection |
 | `delete-collection` | Delete a Solr collection |
 | `raw-request` | Execute an arbitrary Solr Admin API request |

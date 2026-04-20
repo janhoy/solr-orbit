@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 import glob
 import json
 import logging
@@ -40,7 +43,6 @@ from jinja2 import meta, select_autoescape
 
 from osbenchmark import exceptions, time, PROGRAM_NAME, config, version
 from osbenchmark.workload import params, workload
-from osbenchmark.workload.workload import Parallel
 from osbenchmark.utils import io, collections, convert, net, console, modules, opts, repo
 
 
@@ -53,7 +55,7 @@ class WorkloadSyntaxError(exceptions.InvalidSyntax):
 class WorkloadProcessor:
     def on_after_load_workload(self, input_workload, **kwargs):
         """
-        This method is called by OSB after a workload has been loaded. Implementations are expected to modify the
+        This method is called by ASB after a workload has been loaded. Implementations are expected to modify the
         provided workload object in place.
 
         :param workload: The current workload.
@@ -61,7 +63,7 @@ class WorkloadProcessor:
 
     def on_prepare_workload(self, workload, data_root_dir):
         """
-        This method is called by OSB after the "after_load_workload" phase. Here, any data that is necessary for
+        This method is called by ASB after the "after_load_workload" phase. Here, any data that is necessary for
         benchmark run should be prepared, e.g. by downloading data or generating it. Implementations should
         be aware that this method might be called on a different machine than "on_after_load_workload" and they cannot
         share any state in between phases.
@@ -77,7 +79,7 @@ class WorkloadProcessor:
 
 class WorkloadProcessorRegistry:
     def __init__(self, cfg):
-        self.required_processors = [TaskFilterWorkloadProcessor(cfg), TestModeWorkloadProcessor(cfg), QueryRandomizerWorkloadProcessor(cfg), ServerlessFilterWorkloadProcessor(cfg)]
+        self.required_processors = [TaskFilterWorkloadProcessor(cfg), TestModeWorkloadProcessor(cfg), QueryRandomizerWorkloadProcessor(cfg)]
         self.workload_processors = []
         self.offline = cfg.opts("system", "offline.mode")
         self.test_mode = cfg.opts("workload", "test.mode.enabled", mandatory=False, default_value=False)
@@ -886,48 +888,6 @@ class TaskFilterWorkloadProcessor(WorkloadProcessor):
         return input_workload
 
 
-class ServerlessFilterWorkloadProcessor(WorkloadProcessor):
-    def __init__(self, cfg):
-        self.logger = logging.getLogger(__name__)
-        self.serverless_mode = convert.to_bool(cfg.opts("worker_coordinator", "serverless.mode", mandatory=False, default_value=False))
-        self.serverless_operator = convert.to_bool(cfg.opts("worker_coordinator", "serverless.operator", mandatory=False, default_value=False))
-
-    def _is_filtered_task(self, operation):
-        if operation.run_on_serverless is not None:
-            return not operation.run_on_serverless
-
-        if operation.type == "raw-request":
-            self.logger.info("Treating raw-request operation for operation [%s] as public.", operation.name)
-
-        try:
-            op = workload.OperationType.from_hyphenated_string(operation.type)
-            if self.serverless_mode:
-                return op.serverless_status < workload.ServerlessStatus.Public
-        except KeyError:
-            self.logger.info("Treating user-provided operation type [%s] for operation [%s] as public.", operation.type, operation.name)
-            return False
-
-    def on_after_load_workload(self, input_workload, **kwargs):
-        if not self.serverless_mode:
-            return input_workload
-
-        for test_procedure in input_workload.test_procedures:
-            tasks_to_remove = []
-            for task in test_procedure.schedule:
-                if isinstance(task, Parallel):
-                    test_procedure.serverless_info.append(f"Treating parallel task in test-procedure [{test_procedure}] as public.")
-                elif self._is_filtered_task(task.operation):
-                    tasks_to_remove.append(task)
-
-            for task in tasks_to_remove:
-                test_procedure.remove_task(task)
-
-            if tasks_to_remove:
-                task_str = ", ".join(f"[{task}]" for task in tasks_to_remove)
-                test_procedure.serverless_info.append(f"Excluding {task_str} as test-procedure [{test_procedure}] is run on serverless.")
-        return input_workload
-
-
 class TestModeWorkloadProcessor(WorkloadProcessor):
     def __init__(self, cfg):
         self.test_mode_enabled = cfg.opts("workload", "test.mode.enabled", mandatory=False, default_value=False)
@@ -1287,7 +1247,7 @@ class WorkloadFileReader:
 
         self.logger.info("Reading workload specification file [%s].", workload_spec_file)
         # render the workload to a temporary file instead of dumping it into the logs. It is easier to check for error messages
-        # involving lines numbers and it also does not bloat OSB's log file so much.
+        # involving lines numbers and it also does not bloat ASB's log file so much.
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
         try:
             rendered = render_template_from_file(
@@ -1354,11 +1314,11 @@ class WorkloadFileReader:
                 workload_name, str(raw_version)))
         if WorkloadFileReader.MINIMUM_SUPPORTED_TRACK_VERSION > workload_version:
             raise exceptions.BenchmarkError("Workload {} is on version {} but needs to be updated at least to version {} to work with the "
-                                        "current version of OSB.".format(workload_name, workload_version,
+                                        "current version of ASB.".format(workload_name, workload_version,
                                                                            WorkloadFileReader.MINIMUM_SUPPORTED_TRACK_VERSION))
         if WorkloadFileReader.MAXIMUM_SUPPORTED_TRACK_VERSION < workload_version:
-            raise exceptions.BenchmarkError("Workload {} requires a newer version of OSB. "
-                        "Please upgrade OSB (supported workload version: {}, "
+            raise exceptions.BenchmarkError("Workload {} requires a newer version of ASB. "
+                        "Please upgrade ASB (supported workload version: {}, "
                                         "required workload version: {}).".format(
                                             workload_name,
                                             WorkloadFileReader.MAXIMUM_SUPPORTED_TRACK_VERSION,
@@ -1563,9 +1523,9 @@ class WorkloadSpecificationReader:
             corpus_target_idx = None
 
             if len(collections) == 1:
-                corpus_target_idx = self._r(corpus_spec, "target-index", mandatory=False, default_value=collections[0].name)
+                corpus_target_idx = self._r(corpus_spec, "target-collection", mandatory=False, default_value=collections[0].name)
             elif len(collections) > 1:
-                corpus_target_idx = self._r(corpus_spec, "target-index", mandatory=False)
+                corpus_target_idx = self._r(corpus_spec, "target-collection", mandatory=False)
 
             for doc_spec in self._r(corpus_spec, "documents"):
                 base_url = self._r(doc_spec, "base-url", mandatory=False, default_value=default_base_url)
@@ -1593,11 +1553,9 @@ class WorkloadSpecificationReader:
                     if includes_action_and_meta_data:
                         target_idx = None
                         target_type = None
-                        target_ds = None
                     else:
                         target_type = None
-                        target_ds = None
-                        target_idx = self._r(doc_spec, "target-index",
+                        target_idx = self._r(doc_spec, "target-collection",
                                              mandatory=len(collections) > 0 and corpus_target_idx is None,
                                              default_value=corpus_target_idx,
                                              error_ctx=docs)
@@ -1612,8 +1570,8 @@ class WorkloadSpecificationReader:
                                              number_of_documents=num_docs,
                                              compressed_size_in_bytes=compressed_bytes,
                                              uncompressed_size_in_bytes=uncompressed_bytes,
-                                             target_index=target_idx, target_type=target_type,
-                                             target_data_stream=target_ds, meta_data=doc_meta_data)
+                                             target_collection=target_idx, target_type=target_type,
+                                             meta_data=doc_meta_data)
                     corpus.documents.append(docs)
                 else:
                     self._error("Unknown source-format [%s] in document corpus [%s]." % (source_format, name))

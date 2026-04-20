@@ -21,6 +21,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Modifications copyright (C) 2026 The Apache Software Foundation
+# (Apache Solr contributors). Licensed under the Apache License, Version 2.0.
 
 from __future__ import annotations
 
@@ -50,7 +53,7 @@ __QUERY_RANDOMIZATION_INFOS = {}
 
 def param_source_for_operation(op_type, workload, params, task_name):
     try:
-        # we know that this can only be a OSB core parameter source
+        # we know that this can only be a ASB core parameter source
         return __PARAM_SOURCES_BY_OP[op_type](workload, params, operation_name=task_name)
     except KeyError:
         pass
@@ -172,7 +175,7 @@ class ParamSource:
 
     def partition(self, partition_index, total_partitions):
         """
-        This method will be invoked by OSB at the beginning of the lifecycle. It splits a parameter source per client. If the
+        This method will be invoked by ASB at the beginning of the lifecycle. It splits a parameter source per client. If the
         corresponding operation is idempotent, return `self` (e.g. for queries). If the corresponding operation has side-effects and it
         matters which client executes which part (e.g. an index operation from a source file), return the relevant part.
 
@@ -199,7 +202,7 @@ class ParamSource:
         * It will either run an operation for a pre-determined number of times or
         * It can run until the parameter source is exhausted.
 
-        In the former case, you should determine the number of times that `#params()` will be invoked. With that number, OSB can show
+        In the former case, you should determine the number of times that `#params()` will be invoked. With that number, ASB can show
         the progress made so far to the user. In the latter case, return ``None``.
 
         :return:  The "size" of this parameter source or ``None`` if should run eternally.
@@ -217,7 +220,7 @@ class ParamSource:
         """
         For use when a ParamSource does not propagate self._params but does use the cluster client under the hood
 
-        :return: all applicable parameters that are global to OSB and apply to the cluster client
+        :return: all applicable parameters that are global to ASB and apply to the cluster client
         """
         return {
             "request-timeout": self._params.get("request-timeout"),
@@ -496,7 +499,7 @@ class BulkIndexParamSource(ParamSource):
         for corpus in t.corpora:
             if corpus.name in corpora_names:
                 filtered_corpus = corpus.filter(source_format=workload.Documents.SOURCE_FORMAT_BULK,
-                                                target_indices=params.get("indices"))
+                                                target_collections=params.get("indices"))
                 if filtered_corpus.streaming_ingestion or \
                    filtered_corpus.number_of_documents(source_format=workload.Documents.SOURCE_FORMAT_BULK) > 0:
                     corpora.append(filtered_corpus)
@@ -656,14 +659,8 @@ def create_default_reader(corpus, docs, offset, num_lines, num_docs, batch_size,
     source = Slice(io.MmapSource, offset, num_lines, corpus, docs)
     target = None
     use_create = False
-    if docs.target_index:
-        target = docs.target_index
-    elif docs.target_data_stream:
-        target = docs.target_data_stream
-        use_create = True
-        if id_conflicts != IndexIdConflict.NoConflicts:
-            # can only create docs in data streams
-            raise exceptions.BenchmarkError("Conflicts cannot be generated with append only data streams")
+    if docs.target_collection:
+        target = docs.target_collection
 
     if docs.includes_action_and_meta_data:
         return SourceOnlyIndexDataReader(docs.document_file, batch_size, bulk_size, source, target, docs.target_type)
@@ -688,9 +685,7 @@ def create_readers(num_clients, start_client_index, end_client_index, corpora, b
                 offset, num_docs, num_lines = bounds(docs.number_of_documents, start_client_index, end_client_index,
                                                      num_clients, docs.includes_action_and_meta_data)
                 if num_docs > 0:
-                    target = f"{docs.target_index}/{docs.target_type}" if docs.target_index else "/"
-                    if docs.target_data_stream:
-                        target = docs.target_data_stream
+                    target = f"{docs.target_collection}/{docs.target_type}" if docs.target_collection else "/"
                     logger.info("Task-relative clients at index [%d-%d] will bulk index [%d] docs starting from line offset [%d] for [%s] "
                                 "from corpus [%s].", start_client_index, end_client_index, num_docs, offset,
                                 target, corpus.name)
@@ -1164,7 +1159,7 @@ class SolrBulkIndexParamSource(BulkIndexParamSource):
     Extends BulkIndexParamSource to inject a default ``collection`` from the workload
     when the operation does not specify one explicitly.
 
-    This mirrors OSB's own get_target() mechanism used by SearchParamSource, ensuring
+    This mirrors ASB's own get_target() mechanism used by SearchParamSource, ensuring
     that bulk-index operations work without an explicit ``collection`` param as long as
     the workload has exactly one collection defined.
     """
@@ -1183,7 +1178,7 @@ class SolrOptimizeParamSource(ParamSource):
     Param source for Solr optimize operations.
 
     Resolves the target collection via get_target() when not explicitly specified,
-    mirroring OSB's default-index mechanism.
+    mirroring ASB's default-index mechanism.
     """
 
     def __init__(self, workload, params, **kwargs):
