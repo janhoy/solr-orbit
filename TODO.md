@@ -6,8 +6,27 @@
 - [ ] Add integration tests for full workload execution
 - [ ] Faceting/aggregation result validation
 
+## ASF Donation
+
+Steps to donate this repository to the Apache Software Foundation under the Solr PMC:
+
+- [ ] Hold a procedural vote on the Solr dev@ mailing list to adopt Solr Orbit as an Apache Solr
+  sub-project
+- [ ] Fill in and submit the [ASF IP Clearance form](https://incubator.apache.org/ip-clearance/)
+  to the incubator (lazy consensus; conducted by the Solr PMC)
+- [ ] Order the new `apache/solr-orbit*` repositories via the Apache self-service repo tooling
+- [ ] Import the codebase — starting from the last OpenSearch Benchmark commit that was forked —
+  into the new repos, establishing a clean starting point in Apache git history
+- [ ] Request a trademark check from trademarks@apache.org for the "Solr Orbit" name (not
+  required by policy, but advisable before public announcement)
+- [ ] Open one PR per `apache/solr-orbit*` repo carrying all porting work accumulated in this
+  repo (telemetry, Solr client, workloads, docs, CI, etc.)
+
 ## Documentation
 
+- [ ] Decide on where to host the public documentation after moving to the `apache/` GitHub
+  organisation — GitHub Pages is already set up; confirm it stays or migrate — and update all
+  internal and external links accordingly
 - [ ] Document telemetry usage and configuration in DEVELOPER_GUIDE.md
 - [ ] Document the SolrClient pattern in DEVELOPER_GUIDE.md
 - [ ] Create troubleshooting guide
@@ -31,9 +50,9 @@
 
 ## Codebase Hygiene
 
-- [ ] Rename the product from "Solr Benchmark" to "Solr Orbit" once accepted into the Apache
-  Solr project — touches the project name, CLI entry points (`solr-benchmark` → `solr-orbit`),
-  `setup.py`, README, all docs, and PyPI package name
+- [ ] Rename the product from "Solr Benchmark" to "Solr Orbit" after the porting PRs land in the
+  new Apache repos (step 7 of the ASF donation process) — touches the project name, CLI entry
+  points (`solr-benchmark` → `solr-orbit`), `setup.py`, README, all docs, and PyPI package name
 - [ ] Rename the `osbenchmark` package and folder to match the new product name — the current
   name is an artefact of the OpenSearch Benchmark fork; touches imports across the entire
   codebase, entry points in `setup.py`, and all references in docs and CI scripts
