@@ -29,7 +29,7 @@ Accepted by all subcommands.
 | `--workload` | string | — | Named workload (fetched from workloads repository) |
 | `--workload-path` | path | — | Local workload directory path |
 | `--workload-repository` | string | `"default"` | Git URL for the workloads repository (the string `"default"` resolves to the URL configured in `benchmark.ini`) |
-| `--workload-revision` | string | — | Git revision (branch, tag, or commit) of the workloads repository; optional, uses the repository's default branch if omitted |
+| `--workload-revision` | string | — | Git revision (branch, tag, or commit) of the workloads repository. If omitted, the branch is selected automatically based on `--distribution-version` (e.g., `10.0.0` → branch `10`); falls back to `main` if no matching branch exists. |
 | `--workload-params` | string | — | Comma-separated `key:value` Jinja2 parameter overrides |
 | `--test-procedure` | string | workload default | Test procedure name to run |
 | `--include-tasks` | string | — | Comma-separated task names to run; all other tasks are skipped |
