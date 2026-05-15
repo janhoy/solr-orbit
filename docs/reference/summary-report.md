@@ -61,7 +61,7 @@ Each run also produces a `test_run.json` file alongside the results:
 
 ```json
 {
-  "test_execution_id": "20240115T120000Z",
+  "test_run_id": "20240115T120000Z",
   "workload": "nyc_taxis",
   "test_procedure": "append-no-conflicts",
   "pipeline": "benchmark-only",
