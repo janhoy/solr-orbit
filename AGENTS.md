@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents working with this repository.
 
 ## Development Setup
 
@@ -46,13 +46,14 @@ Apache Solr Benchmark (ASB) is a **macrobenchmarking framework** for Apache Solr
 ### Core Package (`osbenchmark/`)
 
 **Orchestration layer:**
-- `benchmark.py` — CLI arg parsing, subcommands: `run`, `list`, `info`, `generate`
+- `benchmark.py` — CLI arg parsing, subcommands: `run`, `list`, `info`, `generate`, `convert-workload`
 - `test_run_orchestrator.py` — Pipeline execution: prepares, launches cluster, runs workload, publishes results
 - `actor.py` — Thespian actor system setup for parallel/distributed execution
 - `config.py` — Configuration loading and management
 
 **Cluster management (`builder/`):**
-- `provisioners/` — Provision cluster nodes (bare metal, Docker, cloud)
+- `solr_provisioner.py` — Download, install and launch Solr (from distribution, sources, or Docker)
+- `provisioners/` — Generic node provisioning infrastructure
 - `downloaders/` — Download Solr distributions
 - `installers/` — Install Solr on provisioned nodes
 - `launchers/` — Start/stop cluster nodes
@@ -60,17 +61,24 @@ Apache Solr Benchmark (ASB) is a **macrobenchmarking framework** for Apache Solr
 - `configs/` — Jinja2 templates for cluster configuration
 
 **Benchmark execution:**
-- `workload/` — Load and manage workload definitions (test procedures, operations, challenges)
+- `workload/` — Load and manage workload definitions (test procedures, operations, schedules)
 - `worker_coordinator/` — Coordinate distributed worker nodes; `driver.py` drives actual load
-- `metrics.py` — Collect, store, and aggregate benchmark metrics
-- `telemetry.py` — Collect system metrics (CPU, memory, GC, etc.) during benchmarks
+- `worker_coordinator/runner.py` — Solr operation runners (`SolrBulkIndex`, `SolrSearch`, `SolrCreateCollection`, etc.)
+- `metrics.py` — Collect, store, and aggregate benchmark metrics (filesystem-backed; no external store)
+- `telemetry.py` — Solr-specific telemetry devices (JVM, node, collection, query, indexing, cache stats)
 - `publisher.py` — Publish and format benchmark results
+- `result_writer.py` — Write results to local filesystem (JSON/CSV)
 
 **Data and connectivity:**
-- `client.py`, `async_connection.py` — Solr client wrappers
-- `kafka_client.py`, `data_streaming/` — Kafka-based data streaming support
+- `client.py` — `SolrAdminClient` and `SolrClient` (HTTP via `requests`/`pysolr`; Collections API, `/select`, `/update`)
 - `synthetic_data_generator/` — Generate synthetic test datasets
-- `workload_generator/` — Generate workload definition files from existing indices
+- `workload_generator/` — Generate workload definition files from existing Solr collections
+
+**Workload conversion:**
+- `conversion/workload_converter.py` — Convert an OpenSearch Benchmark workload directory to Solr format
+- `conversion/detector.py` — Detect whether a workload uses OpenSearch-only operations/query DSL
+- `conversion/query.py` — Translate OpenSearch Query DSL to Solr JSON Query DSL
+- `conversion/schema.py` — Translate OpenSearch index mappings to Solr `managed-schema.xml`
 
 **Utilities:**
 - `utils/` — IO, process management, console output, network, version parsing, options handling
@@ -81,16 +89,18 @@ Apache Solr Benchmark (ASB) is a **macrobenchmarking framework** for Apache Solr
 
 - `tests/` — Unit tests mirroring `osbenchmark/` structure
 - `it/` — Integration tests (spin up real Solr clusters via Docker/provisioning)
-- `benchmarks/` — Performance benchmarks for Solr Benchmark itself
+- `benchmarks/` — Performance benchmarks for ASB itself
 
 ### Workload System
 
 Workloads are defined as JSON/YAML files with:
 - **Operations**: individual actions (bulk indexing, search queries)
-- **Test procedures** (formerly "challenges"): sequences of operations with parameters
-- **Schedules**: timing and throughput targets
+- **Test procedures**: sequences of operations with parameters and schedules
+- **Corpora**: dataset files (compatible with OpenSearch Benchmark format)
 
-Workloads must be in Solr format (use `solr-benchmark convert-workload` to convert from OpenSearch Benchmark format). They can be loaded from a local path (`--workload-path`) or from a git workload repository (`--workload-repository`).
+Workloads must be in Solr format. Use `solr-benchmark convert-workload` to convert from
+OpenSearch Benchmark format. Workloads can be loaded from a local path (`--workload-path`)
+or from a git workload repository (`--workload-repository`).
 
 ### Pipeline Execution Flow
 
@@ -99,19 +109,8 @@ Workloads must be in Solr format (use `solr-benchmark convert-workload` to conve
 3. **Run** — Execute test procedure via worker coordinator and drivers
 4. **Publish** — Store metrics, generate report
 
-## Active Technologies
-- Python 3.10+ (001-solr-benchmark-fork)
-- Local filesystem (JSON + CSV result files, configurable path). No external store required. (001-solr-benchmark-fork)
-- Python 3.10+ + pysolr 3.x (data operations), requests (admin HTTP), thespian (actor model), pytest (tests), tabulate (console tables) (001-solr-benchmark-fork)
-- Local filesystem — JSON/CSV result files at `~/.solr-benchmark/`, SQLite test-runs store (001-solr-benchmark-fork)
-- Python 3.10+ + pysolr 3.x, requests, thespian (actor model), pytes (001-solr-benchmark-fork)
-- Local filesystem — JSON/CSV result files, SQLite test-runs store (001-solr-benchmark-fork)
-- Python 3.10+ + `pysolr` 3.x (data ops), `requests` (HTTP admin), `psutil` (process I/O for DiskIo), `thespian` (actor model) (001-solr-benchmark-fork)
-- N/A (telemetry data written to local result files via existing ResultWriter) (001-solr-benchmark-fork)
+## Key Technologies
 
-- Jekyll 4.4.1 + just-the-docs 0.12.0 gem — documentation site in `docs/` (001-solr-benchmark-fork)
-- GitHub Actions (`docs.yml`) — deploy docs to GitHub Pages on push to main (001-solr-benchmark-fork)
-
-## Recent Changes
-- 001-solr-benchmark-fork: Added Python 3.10+
-- 001-solr-benchmark-fork: Added Jekyll docs site (docs/) with just-the-docs theme
+- **Python 3.10+** with `pysolr` (data ops), `requests` (HTTP admin), `psutil` (I/O metrics), `thespian` (actor model), `pytest` (tests), `tabulate` (console output)
+- **Metrics store**: local filesystem — JSON/CSV result files at `~/.solr-benchmark/`, SQLite test-runs store
+- **Docs**: Jekyll 4.x + just-the-docs gem in `docs/`; deployed to GitHub Pages via `.github/workflows/docs.yml`
