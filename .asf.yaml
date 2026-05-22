@@ -26,12 +26,12 @@ github:
     merge: false
     rebase: false
 
-  # Auto-delete head branch after a PR is merged
-  delete_branch_on_merge: true
+  pull_requests:
+    # Auto-delete head branch after a PR is merged
+    del_branch_on_merge: true
 
-  # GitHub Pages
-  ghp_branch: gh-pages
-  ghp_path: ~
+  autolink_jira:
+    - SOLR
 
   # Branch protection ruleset
   rulesets:
@@ -52,5 +52,3 @@ notifications:
   commits: commits@solr.apache.org
   issues: issues@solr.apache.org
   pullrequests: issues@solr.apache.org
-  pullrequests_status: dev@solr.apache.org
-  pullrequests_comment: issues@solr.apache.org
