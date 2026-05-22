@@ -29,17 +29,24 @@ github:
   # Auto-delete head branch after a PR is merged
   delete_branch_on_merge: true
 
-  # Branch protection for the default branch
-  protected_branches:
-    main:
-      required_pull_request_reviews:
-        dismiss_stale_reviews: true
-        require_last_push_approval: true
-        required_approving_review_count: 1
-      # Enforce linear history (no merge commits)
-      required_linear_history: true
-      # All PR comments must be resolved before merge
-      required_conversation_resolution: true
+  # GitHub Pages
+  ghp_branch: gh-pages
+  ghp_path: ~
+
+  # Branch protection ruleset
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          - "release/*"
+          - "rel/*"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
 
 notifications:
   commits: commits@solr.apache.org
