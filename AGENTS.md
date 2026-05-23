@@ -111,6 +111,6 @@ or from a git workload repository (`--workload-repository`).
 
 ## Key Technologies
 
-- **Python 3.10+** with `pysolr` (data ops), `requests` (HTTP admin), `psutil` (I/O metrics), `thespian` (actor model), `pytest` (tests), `tabulate` (console output)
+- **Python 3.12+** with `pysolr` (data ops), `requests` (HTTP admin), `psutil` (I/O metrics), `thespian` (actor model), `pytest` (tests), `tabulate` (console output)
 - **Metrics store**: local filesystem — JSON/CSV result files at `~/.solr-orbit/`, SQLite test-runs store
 - **Docs**: Jekyll 4.x + just-the-docs gem in `docs/`; deployed to GitHub Pages via `.github/workflows/docs.yml`
