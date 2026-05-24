@@ -11,8 +11,6 @@ Make changes to the following files and open a PR titled
 * `.ci/variables.json`: Update Python variables and `MIN_PY_VER` as needed.
   For example: to add Python `3.13`, ensure there is a `PY313` variable set
   to the latest patch release such as `3.13.1`.
-* `.github/workflows/integ-tests.yml`: Update supported Python versions in
-  the `python-versions` section.
 * `pyproject.toml`: Update `requires-python` and the `classifiers` list under `[project]`.
 * `pyproject.toml`: Update `envlist` in the `[tool.tox]` `legacy_tox_ini` section.
 * `Makefile`: If updating the minimum supported Python version, update the
