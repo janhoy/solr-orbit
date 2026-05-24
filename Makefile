@@ -83,11 +83,11 @@ test: develop
 	pytest tests/
 
 it: pyinst check-java python-caches-clean tox-env-clean
-	@which tox || $(PIP) install tox
+	@which tox || $(PIP) install "tox>=4"
 	tox
 
 it312 it313: pyinst check-java python-caches-clean tox-env-clean
-	@which tox || $(PIP) install tox
+	@which tox || $(PIP) install "tox>=4"
 	tox -e $(@:it%=py%)
 
 benchmark:
