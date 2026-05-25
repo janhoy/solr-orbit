@@ -70,9 +70,9 @@ python-caches-clean:
 	-@find . -name "__pycache__" -prune -exec rm -rf -- \{\} \;
 	-@find . -name ".pyc" -prune -exec rm -rf -- \{\} \;
 
-# Note: pip will not update project dependencies (specified either in the install_requires or the extras
-# section of the setup.py) if any version is already installed; therefore we recommend
-# recreating your environments whenever your project dependencies change.
+# Note: pip will not update project dependencies (specified in pyproject.toml) if any version is
+# already installed; therefore we recommend recreating your environments whenever your project
+# dependencies change.
 tox-env-clean:
 	rm -rf .tox
 
@@ -83,18 +83,18 @@ test: develop
 	pytest tests/
 
 it: pyinst check-java python-caches-clean tox-env-clean
-	@which tox || $(PIP) install tox
+	@tox --version 2>/dev/null | grep -qE '^[4-9]\.' || $(PIP) install "tox>=4"
 	tox
 
 it312 it313: pyinst check-java python-caches-clean tox-env-clean
-	@which tox || $(PIP) install tox
+	@tox --version 2>/dev/null | grep -qE '^[4-9]\.' || $(PIP) install "tox>=4"
 	tox -e $(@:it%=py%)
 
 benchmark:
 	pytest benchmarks/
 
 coverage:
-	coverage run setup.py test
+	coverage run -m pytest tests/
 	coverage html
 
 release-checks:
