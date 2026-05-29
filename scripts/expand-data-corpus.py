@@ -246,7 +246,7 @@ def main(args: list) -> None:
     script_name = os.path.basename(__file__)
 
     parser = ArgParser(description=help_msg,
-		formatter_class=argparse.RawTextHelpFormatter)
+                       formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-w', '--workload',
                         default='http_logs',
                         help="workload name, default: %(default)s")
@@ -293,7 +293,7 @@ def main(args: list) -> None:
         parser.usage_msg(script_name +
                      ": must specify number of documents or corpus size")
     interval = args.interval if args.interval is not None else \
-			corpus_size * -2
+        corpus_size * -2
     if workload != 'http_logs':
         parser.usage_msg(script_name +
                      ': only the "http_logs" workload is currently supported')
