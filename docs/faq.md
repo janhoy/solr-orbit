@@ -25,9 +25,6 @@ solr-orbit convert-workload \
 
 See [Converter Tool](converter/) for details on what gets converted automatically.
 
-**How is a collection different from an index?**
-In Apache Solr, the equivalent of an OpenSearch index is a *collection*. A collection is a logical grouping of documents distributed across shards. See [Glossary](glossary.html) for a full terminology mapping.
-
 **Can I benchmark a multi-node Solr cluster?**
 Yes. Pass multiple hosts to `--target-hosts`, separated by commas:
 
@@ -36,10 +33,7 @@ solr-orbit run --target-hosts node1:8983,node2:8983,node3:8983 ...
 ```
 
 **What pipelines are available?**
-- `benchmark-only` — run against an existing cluster (no provisioning)
-- `docker` — start a Solr cluster via Docker, then benchmark, then tear down
-- `from-distribution` — download and install Solr, then benchmark, then tear down
-- `from-sources` — build Solr from source, install, benchmark, then tear down
+See [Pipelines](user-guide/concepts.html#pipelines) in the Concepts page.
 
 **How do I run in test mode?**
 Pass `--test-mode` to limit the workload to a small subset of documents (at most 1,000) for quick validation:

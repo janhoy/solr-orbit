@@ -34,7 +34,19 @@ A *pipeline* is a sequence of high-level phases that a benchmark run executes:
 
 ## Collections
 
-A *collection* is the Solr equivalent of an OpenSearch index — a logical grouping of documents distributed across shards. Collections are defined in the workload's `"collections"` array and are created before benchmarking begins.
+A *collection* is a logical grouping of documents distributed across shards. Collections are defined in the workload's `"collections"` array and are created before benchmarking begins.
+
+## Replicas
+
+Each shard in a collection can have multiple replicas. Apache Solr supports three replica types:
+
+**Shard Leader** — The primary replica of a shard, responsible for accepting writes and coordinating replication.
+
+**NRT Replica** — A near-real-time replica that receives updates directly from the shard leader and participates in leader election.
+
+**TLOG Replica** — A transaction-log replica that receives updates via replication from the shard leader and buffers changes in a transaction log.
+
+**Pull Replica** — A read-only replica that only receives index segments from the shard leader, not transaction log entries.
 
 ## Configsets
 
@@ -66,7 +78,7 @@ A *schedule* controls how an operation executes: number of iterations, target th
 
 ## Facets
 
-*Facets* are Solr's aggregation mechanism — the Solr equivalent of OpenSearch aggregations. When using the [Converter Tool](../converter/), OpenSearch aggregation expressions are translated into Solr facet syntax.
+*Facets* are Solr's aggregation mechanism for computing counts, statistics, and groupings over search results.
 
 ---
 
