@@ -17,7 +17,7 @@ source .venv/bin/activate  # Activate virtual environment
 ## Common Commands
 
 ```bash
-make lint             # Run pylint on solrorbit/, benchmarks/, scripts/, tests/, it/
+make lint             # Run ruff check on all Python source files
 make test             # Run unit tests (pytest tests/)
 pytest tests/path/to/test_file.py::TestClass::test_method  # Run a single test
 make it               # Run integration tests via tox (requires Java, Docker; ~30 min)
@@ -29,10 +29,9 @@ make clean            # Remove build artifacts, caches, tox environments
 
 ## Code Style
 
-- **Linter**: pylint with `pylint-quotes` plugin (`.pylintrc`)
-- **String quotes**: Double quotes enforced
+- **Linter**: [ruff](https://docs.astral.sh/ruff/) (configured in `pyproject.toml` under `[tool.ruff]`)
 - **Max line length**: 180 characters
-- **Max module lines**: 1000
+- Run `make lint` before committing; CI enforces this on every PR
 
 ## Architecture
 

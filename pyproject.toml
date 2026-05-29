@@ -141,8 +141,32 @@ develop = [
     "twine==6.2.0",
     "wheel>=0.38.4",
     "github3.py==4.0.1",
-    "pylint==4.0.5",
+    "ruff>=0.9.0",
 ]
+
+# ---------------------------------------------------------------------------
+# ruff – linting
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 180
+target-version = "py312"
+
+[tool.ruff.lint]
+# E: pycodestyle errors, F: pyflakes
+select = ["E", "F"]
+ignore = [
+    # These were disabled in the previous pylint configuration
+    "E402",  # module-level import not at top of file (wrong-import-position)
+    "E731",  # lambda assignment (unnecessary-lambda-assignment)
+    "E741",  # ambiguous variable name (invalid-name)
+    "F402",  # import shadowed by loop variable
+    "F403",  # star imports (used in __init__.py for public API)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py files use imports purely for re-exporting the public API
+"**/__init__.py" = ["F401"]
 
 # ---------------------------------------------------------------------------
 # Setuptools configuration

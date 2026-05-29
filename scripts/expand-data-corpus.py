@@ -265,8 +265,8 @@ def main(args: list) -> None:
                         help="[EXPERT] number of documents to generate")
     parser.add_argument('-i', '--interval', type=int,
                         help="[EXPERT] interval between consecutive "
-	        "timestamps, use a negative number to specify multiple "
-		"docs per timestamp")
+                        "timestamps, use a negative number to specify multiple "
+                        "docs per timestamp")
     parser.add_argument('-t', '--start-timestamp', type=int,
                         default=893964618,
                         help="[EXPERT] start timestamp, default: %(default)d")

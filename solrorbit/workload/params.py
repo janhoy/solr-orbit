@@ -102,9 +102,9 @@ def register_standard_value_source(op_name, field_name, standard_value_source):
         __STANDARD_VALUE_SOURCES[op_name] = {field_name:standard_value_source}
 
 def generate_standard_values_if_absent(op_name, field_name, n):
-    if not op_name in __STANDARD_VALUES:
+    if op_name not in __STANDARD_VALUES:
         __STANDARD_VALUES[op_name] = {}
-    if not field_name in __STANDARD_VALUES[op_name]:
+    if field_name not in __STANDARD_VALUES[op_name]:
         __STANDARD_VALUES[op_name][field_name] = []
         try:
             standard_value_source = __STANDARD_VALUE_SOURCES[op_name][field_name]

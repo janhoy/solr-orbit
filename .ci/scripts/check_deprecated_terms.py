@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # .ci/scripts/check_deprecated_terms.py
  
-import os, re, sys, argparse
+import os
+import re
+import sys
+import argparse
  
 # ---- Term sets ----
 # Block these when you're on the *2.x* branch (i.e., forbid legacy 1.x names):
