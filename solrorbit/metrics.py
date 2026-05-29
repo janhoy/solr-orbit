@@ -34,7 +34,6 @@ import os
 import pickle
 import statistics
 import sys
-import time
 import zlib
 import webbrowser
 from enum import Enum, IntEnum

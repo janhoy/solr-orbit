@@ -1116,7 +1116,7 @@ class QueryRandomizerWorkloadProcessor(WorkloadProcessor):
                               **kwargs):
         # The queries as listed in operations/default.json don't have the index param,
         # unlike the custom ones you would specify in workload.py, so we have to add them ourselves
-        if not "index" in input_params:
+        if "index" not in input_params:
             input_params["index"] = params.get_target(input_workload, input_params)
 
         fields_and_paths = self.extract_fields_and_paths(input_params, query_randomization_info)

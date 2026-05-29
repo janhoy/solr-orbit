@@ -2521,7 +2521,7 @@ async def execute_single(runner, clients, params, on_error, redline_enabled=Fals
                     operation_error = parse_error(error_metadata)
                     if not redline_enabled:
                         console.error(operation_error.get_error_message())
-                except Exception as e:
+                except Exception:
                     # error-description is not a valid json so we just print it
                     if not redline_enabled:
                         console.error(request_meta_data["error-description"])

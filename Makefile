@@ -77,7 +77,8 @@ tox-env-clean:
 	rm -rf .tox
 
 lint:
-	@find solrorbit benchmarks scripts tests it -name "*.py" -exec pylint -j0 -rn --rcfile=$(CURDIR)/.pylintrc \{\} +
+	ruff check .
+	# ruff format --check .  # uncomment once the codebase has been formatted
 
 test: develop
 	pytest tests/
