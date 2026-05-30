@@ -16,7 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+set -euo pipefail
+cd "$(dirname "$0")/.."
 
 release_version=$1
 next_version=$2

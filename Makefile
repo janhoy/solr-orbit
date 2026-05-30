@@ -106,9 +106,11 @@ coverage:
 $(RAT_JAR):
 	mkdir -p $(RAT_JAR_DIR)
 	curl -fsSL $(RAT_URL) | tar -xz -C $(RAT_JAR_DIR) --strip-components=1 "apache-rat-$(RAT_VERSION)/apache-rat-$(RAT_VERSION).jar"
+	curl -fsSL "$(RAT_URL).sha512" -o "$(RAT_JAR).sha512"
+	cd $(RAT_JAR_DIR) && shasum -a 512 -c "apache-rat-$(RAT_VERSION).jar.sha512"
 
 rat: $(RAT_JAR)
-	java -jar $(RAT_JAR) -E .rat-excludes -d .
+	java -jar $(RAT_JAR) --input-exclude-file .rat-excludes -- .
 
 release-checks:
 	./scripts/release-checks.sh $(release_version) $(next_version)

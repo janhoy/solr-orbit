@@ -146,7 +146,7 @@ If RAT reports unexpected unapproved files, either:
 The full release pre-flight is run via:
 
 ```bash
-make release-checks release_version=X.Y.Z next_version=X.Y.Z+1
+make release-checks release_version=0.9.2 next_version=0.9.3
 ```
 
 ## Miscellaneous
