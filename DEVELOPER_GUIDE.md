@@ -11,6 +11,7 @@ Apache Solr Orbit.
 - [Running Tests](#running-tests)
 - [Submitting a Pull Request](#submitting-a-pull-request)
 - [Developing Breaking Changes](#developing-breaking-changes)
+- [Release](#release)
 - [Miscellaneous](#miscellaneous)
 
 ## Prerequisites
@@ -121,6 +122,32 @@ make it
 
 Develop breaking changes in a dedicated feature branch. Rebase onto `main`
 before the next release and merge at that point.
+
+## Release
+
+### License audit (Apache RAT)
+
+[Apache RAT](https://creadur.apache.org/rat/) is required by ASF release policy to verify
+that every file in a source release carries an approved license header. Run it before
+cutting a release:
+
+```bash
+make rat
+```
+
+RAT downloads its runner JAR to `~/.cache/apache-rat/` on first use (requires `curl` and
+`java`). Exclusions for files that legitimately carry no header (test fixtures, config
+files, generated output, binaries) are listed in `.rat-excludes`.
+
+If RAT reports unexpected unapproved files, either:
+- Add the Apache license header to the file, or
+- Add an exclusion pattern to `.rat-excludes` with a comment explaining why the file is exempt
+
+The full release pre-flight is run via:
+
+```bash
+make release-checks release_version=X.Y.Z next_version=X.Y.Z+1
+```
 
 ## Miscellaneous
 
