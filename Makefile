@@ -23,9 +23,8 @@ VERSION312 = $(shell jq -r '.python_versions | .[]' .ci/variables.json | sed '$$
 PYENV_ERROR = "\033[0;31mIMPORTANT\033[0m: Please install pyenv and run \033[0;31meval \"\$$(pyenv init -)\"\033[0m.\n"
 
 RAT_VERSION = 0.18
-RAT_JAR_DIR = $(HOME)/.cache/apache-rat
+RAT_JAR_DIR = $(HOME)/.solr-orbit/cache/apache-rat
 RAT_JAR = $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION).jar
-RAT_URL = https://downloads.apache.org/creadur/apache-rat-$(RAT_VERSION)/apache-rat-$(RAT_VERSION)-bin.tar.gz
 
 all: develop
 
@@ -104,14 +103,10 @@ coverage:
 	coverage html
 
 $(RAT_JAR):
-	mkdir -p $(RAT_JAR_DIR)
-	curl -fsSL $(RAT_URL) -o $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION)-bin.tar.gz
-	curl -fsSL "$(RAT_URL).sha512" -o $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION)-bin.tar.gz.sha512
-	cd $(RAT_JAR_DIR) && echo "$$(cat apache-rat-$(RAT_VERSION)-bin.tar.gz.sha512)  apache-rat-$(RAT_VERSION)-bin.tar.gz" | shasum -a 512 -c
-	tar -xz -C $(RAT_JAR_DIR) --strip-components=1 -f $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION)-bin.tar.gz "apache-rat-$(RAT_VERSION)/apache-rat-$(RAT_VERSION).jar"
-	rm $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION)-bin.tar.gz $(RAT_JAR_DIR)/apache-rat-$(RAT_VERSION)-bin.tar.gz.sha512
+	$(PYTHON) scripts/download-rat.py $(RAT_VERSION) $(RAT_JAR)
 
 rat: $(RAT_JAR)
+	@java -version > /dev/null 2>&1 || { echo "ERROR: java not found on PATH; install a JDK to run Apache RAT"; exit 1; }
 	java -jar $(RAT_JAR) --input-exclude-file .rat-excludes -- .
 
 release-checks:

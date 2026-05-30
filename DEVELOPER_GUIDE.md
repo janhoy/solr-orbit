@@ -135,9 +135,9 @@ cutting a release:
 make rat
 ```
 
-RAT downloads its runner JAR to `~/.cache/apache-rat/` on first use (requires `curl` and
-`java`). Exclusions for files that legitimately carry no header (test fixtures, config
-files, generated output, binaries) are listed in `.rat-excludes`.
+RAT downloads its runner JAR to `~/.solr-orbit/cache/apache-rat/` on first use (requires
+Python 3 and `java`). Exclusions for files that legitimately carry no header (test fixtures,
+config files, generated output, binaries) are listed in `.rat-excludes`.
 
 If RAT reports unexpected unapproved files, either:
 - Add the Apache license header to the file, or
